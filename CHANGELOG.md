@@ -1,3 +1,11 @@
+## [3.34.1](https://github.com/breaking-brake/cc-wf-studio/compare/v3.34.0...v3.34.1) (2026-05-05)
+
+### Improvements
+
+* add daily dev flow with git worktree sample ([#760](https://github.com/breaking-brake/cc-wf-studio/issues/760)) ([32992c8](https://github.com/breaking-brake/cc-wf-studio/commit/32992c8f4611b8114cbf473a79d9472f41a46382))
+* add preview button to sample workflow list ([#761](https://github.com/breaking-brake/cc-wf-studio/issues/761)) ([778c196](https://github.com/breaking-brake/cc-wf-studio/commit/778c196ad6136b11744fb61f360f89e7b7d0a0ff))
+* disable source maps in production builds ([#758](https://github.com/breaking-brake/cc-wf-studio/issues/758)) ([b4af393](https://github.com/breaking-brake/cc-wf-studio/commit/b4af39355d94c05c9ddd9ae71071a9ee9813ec8c))
+
 ## [3.34.0](https://github.com/breaking-brake/cc-wf-studio/compare/v3.33.1...v3.34.0) (2026-05-04)
 
 ### Features
