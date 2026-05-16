@@ -323,7 +323,9 @@ export interface PlanWorkflowExportOptions {
 }
 
 const AGENTS_DIR = '.claude/agents';
-const COMMANDS_DIR = '.claude/commands';
+// Claude Code is rolling .claude/commands/ into .claude/skills/, so the
+// SlashCommand-style entry point for a workflow lives under skills/ now.
+const SKILLS_DIR = '.claude/skills';
 
 /**
  * Plan the set of files `ccwf run` (and the VSCode extension's export flow)
@@ -376,9 +378,9 @@ export function planWorkflowExportFiles(
     }
   }
 
-  // SlashCommand
+  // Workflow-as-Skill entry (the former SlashCommand file, now under skills/).
   planned.push({
-    relativePath: `${COMMANDS_DIR}/${workflowBaseName}.md`,
+    relativePath: `${SKILLS_DIR}/${workflowBaseName}.md`,
     contents: generateSlashCommandFile(workflow, options),
     kind: 'slashCommand',
     sourceName: workflow.name,
