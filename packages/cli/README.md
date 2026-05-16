@@ -73,6 +73,24 @@ Refuses to clobber existing `.claude/*` files unless `--overwrite` is passed. Af
 
 `fixtures/sample-workflow.json` is a minimal, schema-valid workflow that backs the smoke tests in this package's README examples.
 
+## Development
+
+Inside the monorepo, three invocation paths are available:
+
+```sh
+# 1. tsx — runs straight from src, no rebuild required (fastest iteration)
+pnpm ccwf:dev render packages/cli/fixtures/sample-workflow.json
+
+# 2. built dist — exercises the actual published code path
+pnpm -F @cc-wf-studio/cli build
+pnpm ccwf render packages/cli/fixtures/sample-workflow.json
+
+# 3. via the hoisted bin — same as path 2, but uses the linked bin under node_modules/.bin
+pnpm exec ccwf render packages/cli/fixtures/sample-workflow.json
+```
+
+Use `ccwf:dev` while iterating on a subcommand; use `ccwf` (built) before pushing to confirm the bin shipped under `dist/` still works.
+
 ## License
 
 AGPL-3.0-or-later. See [LICENSE](https://github.com/breaking-brake/cc-wf-studio/blob/main/LICENSE).
