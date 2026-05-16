@@ -1,9 +1,9 @@
 /**
  * @cc-wf-studio/mcp public API.
  *
- * Phase 3 step 1: only the adapter contract and tool registrations are
- * exported. The factory (`createWorkflowMcpServer`) lands in step 2 and the
- * bin entry (`cc-wf-mcp`) lands in step 4.
+ * Exports the adapter contract, tool registrations, and the factory that
+ * stitches them onto an `McpServer`. The bin entry (`cc-wf-mcp`) lives in a
+ * separate module (`./mcp.ts`) that is wired in step 4.
  */
 
 export type {
@@ -19,3 +19,7 @@ export type {
 } from './types.js';
 
 export { registerWorkflowTools } from './tools.js';
+export {
+  createWorkflowMcpServer,
+  type CreateWorkflowMcpServerOptions,
+} from './factory.js';
