@@ -23,14 +23,33 @@ interface CommanderRunOptions {
   launch: boolean;
 }
 
+/**
+ * Next-step hints, one per agent. Format is intentionally uniform:
+ *   "<how to invoke the skill> in <AgentName>. If the skill isn't found,
+ *    restart <AgentName> to pick up the new file."
+ *
+ * Most agents pick up skill files added under `<root>/skills/` automatically
+ * — Claude Code documents live change detection, the CLI-based agents
+ * re-read their skill directory on each invocation. The restart fallback
+ * covers the case where the top-level skills directory didn't exist when
+ * the agent started (Claude Code's documented gotcha) or the agent caches
+ * its skill listing across sessions.
+ */
 const NEXT_STEP_HINTS: Record<string, (slash: string) => string> = {
-  'claude-code': (slash) => `launch Claude Code and run \`/${slash}\``,
-  antigravity: (slash) => `open Antigravity and run the "${slash}" skill`,
-  codex: (slash) => `start Codex CLI and run \`$${slash}\``,
-  copilot: (slash) => `start Copilot CLI and run \`/${slash}\``,
-  cursor: (slash) => `open Cursor and trigger the "${slash}" skill`,
-  gemini: (slash) => `start Gemini CLI and run \`${slash}\``,
-  'roo-code': (slash) => `open Roo Code and run \`:${slash}\``,
+  'claude-code': (slash) =>
+    `run \`/${slash}\` in Claude Code. If the skill isn't found, restart Claude Code to pick up the new file.`,
+  antigravity: (slash) =>
+    `trigger the "${slash}" skill in Antigravity. If the skill isn't found, restart Antigravity to pick up the new file.`,
+  codex: (slash) =>
+    `run \`$${slash}\` in Codex CLI. If the skill isn't found, restart Codex CLI to pick up the new file.`,
+  copilot: (slash) =>
+    `run \`/${slash}\` in Copilot CLI. If the skill isn't found, restart Copilot CLI to pick up the new file.`,
+  cursor: (slash) =>
+    `trigger the "${slash}" skill in Cursor. If the skill isn't found, restart Cursor to pick up the new file.`,
+  gemini: (slash) =>
+    `run \`${slash}\` in Gemini CLI. If the skill isn't found, restart Gemini CLI to pick up the new file.`,
+  'roo-code': (slash) =>
+    `run \`:${slash}\` in Roo Code. If the skill isn't found, restart Roo Code to pick up the new file.`,
 };
 
 export function registerRunCommand(program: Command): void {
@@ -71,7 +90,8 @@ export function registerRunCommand(program: Command): void {
         }
 
         const hint = NEXT_STEP_HINTS[agent](result.slashName);
-        process.stdout.write(`\nNext: in ${result.rootDir}, ${hint}.\n`);
+        // Each hint ends in its own period; no trailing dot here.
+        process.stdout.write(`\nNext: in ${result.rootDir}, ${hint}\n`);
 
         if (options.launch) {
           if (agent !== 'claude-code') {
