@@ -5,8 +5,56 @@
  * Based on: /specs/001-cc-wf-studio/contracts/vscode-extension-api.md section 4.2
  */
 
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { getCurrentLocale } from './i18n/i18n-service';
+
+interface WebviewAssetRefs {
+  scriptPath: string;
+  stylePath: string | null;
+}
+
+/**
+ * Read the built `dist/index.html` to discover the actual asset filenames vite
+ * emitted. We can't hard-code `main.js` / `main.css` because vite renames
+ * entries to avoid base-name collisions with other entries (`overview.html`
+ * was added for `ccwf preview`, which makes vite emit the main bundle as
+ * `main2.js` on some builds). Reading the built HTML keeps the extension
+ * resilient to those renames.
+ *
+ * Falls back to the historical defaults if the manifest can't be parsed.
+ */
+function resolveWebviewAssets(extensionUri: vscode.Uri): WebviewAssetRefs {
+  const fallback: WebviewAssetRefs = {
+    scriptPath: 'assets/main.js',
+    stylePath: 'assets/main.css',
+  };
+  try {
+    const indexHtmlPath = path.join(extensionUri.fsPath, 'src', 'webview', 'dist', 'index.html');
+    const html = fs.readFileSync(indexHtmlPath, 'utf-8');
+    // Strip both `./` and `/` leading segments so the path joins cleanly with
+    // the extensionUri directory (the webview tree always lives at
+    // `src/webview/dist/`; the HTML's own base is just an artefact of vite's
+    // `base: './'` setting we use so the same dist works behind a URL prefix
+    // in `ccwf preview` / `ccwf canvas`).
+    const scriptMatch = html.match(/<script[^>]+type="module"[^>]+src="(?:\.\/|\/)?([^"]+)"/i);
+    const styleMatch = html.match(/<link[^>]+rel="stylesheet"[^>]+href="(?:\.\/|\/)?([^"]+)"/i);
+    if (!scriptMatch) {
+      console.warn('[webview-content] Could not find module script in index.html; using fallback');
+      return fallback;
+    }
+    return {
+      scriptPath: scriptMatch[1],
+      stylePath: styleMatch ? styleMatch[1] : null,
+    };
+  } catch (error) {
+    console.warn(
+      `[webview-content] Failed to resolve webview assets from dist/index.html: ${error instanceof Error ? error.message : String(error)}; using fallback`
+    );
+    return fallback;
+  }
+}
 
 /**
  * Generate HTML content for the Webview
@@ -29,12 +77,15 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
   // query the browser treats `main.js` and `main.js?v=...` as two different
   // modules, evaluates both, and calls `acquireVsCodeApi()` twice (which
   // throws "An instance of the VS Code API has already been acquired").
+  const assets = resolveWebviewAssets(extensionUri);
   const scriptUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'dist', 'assets', 'main.js')
+    vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'dist', ...assets.scriptPath.split('/'))
   );
-  const styleUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'dist', 'assets', 'main.css')
-  );
+  const styleUri = assets.stylePath
+    ? webview.asWebviewUri(
+        vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'dist', ...assets.stylePath.split('/'))
+      )
+    : null;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -55,9 +106,7 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
     ">
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <link href="${styleUri}" rel="stylesheet">
-
+${styleUri ? `\n    <link href="${styleUri}" rel="stylesheet">\n` : ''}
     <title>CC Workflow Studio</title>
 </head>
 <body>

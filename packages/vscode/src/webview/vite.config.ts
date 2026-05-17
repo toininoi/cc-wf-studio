@@ -12,12 +12,21 @@ import { defineConfig } from 'vite';
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
+  // Emit asset references as relative paths (e.g. `./assets/main.js`) so the
+  // built HTML can be served under any URL prefix. ccwf preview / canvas
+  // mount the dist tree behind a `/<sessionId>/` path slug, and the VSCode
+  // extension serves the same file via `asWebviewUri` which rewrites every
+  // request anyway, so relative resolution works in both targets.
+  base: './',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
     rollupOptions: {
       input: {
+        // Canvas entry — full editor used by both the VSCode webview and `ccwf canvas`.
         main: resolve(__dirname, 'index.html'),
+        // Preview entry — read-only WorkflowOverview rendered by `ccwf preview`.
+        overview: resolve(__dirname, 'overview.html'),
       },
       output: {
         entryFileNames: 'assets/[name].js',

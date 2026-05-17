@@ -14,7 +14,7 @@
  * Node.js process. For "just view a workflow" use `ccwf preview` (lighter,
  * read-only, planned in a follow-up).
  *
- * Security model: 127.0.0.1 only + random URL token. NOT designed for network
+ * Security model: 127.0.0.1 only + UUID path slug. NOT designed for network
  * exposure — the warning is printed on startup.
  */
 
@@ -30,7 +30,6 @@ import { WorkflowLoadError, loadWorkflowFromFile } from '../utils/load-workflow.
 interface CanvasOptions {
   port?: string;
   host?: string;
-  noOpen?: boolean;
 }
 
 /**
@@ -98,7 +97,6 @@ export function registerCanvasCommand(program: Command): void {
     .argument('<file>', 'Path to a workflow JSON file.')
     .option('--port <number>', 'Preferred port (default: ephemeral / 0).')
     .option('--host <address>', 'Bind host. Default 127.0.0.1; do not change for public networks.')
-    .option('--no-open', "Don't try to launch a browser automatically.")
     .action(async (file: string, options: CanvasOptions) => {
       try {
         // Validate the file is parseable JSON up-front so the user gets a clear
@@ -124,7 +122,6 @@ export function registerCanvasCommand(program: Command): void {
           `ccwf canvas server listening at ${server.url}`,
           `  workflow: ${path.resolve(file)}`,
           `  bind:     ${server.host}:${server.port}`,
-          `  ws path:  /ws/${server.token}`,
           '',
           'localhost-only — DO NOT expose this URL on a public network.',
           'Save buttons in the canvas will write back to the workflow file.',
@@ -132,11 +129,17 @@ export function registerCanvasCommand(program: Command): void {
         ].join('\n');
         process.stdout.write(`${banner}\n`);
 
-        if (!options.noOpen) {
-          openInBrowser(server.url);
-        }
+        openInBrowser(server.url);
 
+        // Coalesce repeated signals. Terminals deliver SIGINT to the whole
+        // process group on Ctrl+C, and tooling that wraps the CLI (pnpm,
+        // tsx, …) forwards SIGINT to its children too — so without a guard
+        // the handler fires twice and we get a duplicated banner plus a
+        // doomed second `server.close()` racing with the in-flight one.
+        let shuttingDown = false;
         const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
+          if (shuttingDown) return;
+          shuttingDown = true;
           process.stdout.write(`\nReceived ${signal}, shutting down ccwf canvas…\n`);
           try {
             await server.close();

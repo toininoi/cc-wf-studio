@@ -1,7 +1,10 @@
 /**
  * Claude Code Workflow Studio - Webview Entry Point
  *
- * React 18 root initialization and VSCode API acquisition
+ * React 18 root initialization. The `vscode` accessor lives in
+ * `./services/vscode-api` so the lightweight `overview.html` entry can reuse it
+ * without dragging this canvas bootstrap into its bundle.
+ *
  * Based on: /specs/001-cc-wf-studio/plan.md
  */
 
@@ -10,30 +13,9 @@ import ReactDOM from 'react-dom/client';
 import { ReactFlowProvider } from 'reactflow';
 import App from './App';
 import { I18nProvider } from './i18n/i18n-context';
+import { vscode } from './services/vscode-api';
 import 'reactflow/dist/style.css';
 import './styles/main.css';
-
-// ============================================================================
-// VSCode API
-// ============================================================================
-
-/**
- * VSCode API type definition
- * Reference: https://code.visualstudio.com/api/extension-guides/webview
- */
-interface VSCodeAPI {
-  postMessage(message: unknown): void;
-  getState(): unknown;
-  setState(state: unknown): void;
-}
-
-declare global {
-  interface Window {
-    acquireVsCodeApi?: () => VSCodeAPI;
-    initialLocale?: string;
-    vscode?: VSCodeAPI;
-  }
-}
 
 // Vite's `__vitePreload` helper preloads CSS deps for code-split chunks. In the
 // VSCode webview environment those root-relative `assets/main.css` URLs cannot
@@ -55,22 +37,10 @@ window.addEventListener('vite:preloadError', (event) => {
   }
 });
 
-// Acquire VSCode API (only available in VSCode Webview context)
-export const vscode = window.acquireVsCodeApi?.() ?? {
-  postMessage: (message: unknown) => {
-    console.log('[Dev Mode] postMessage:', message);
-  },
-  getState: () => {
-    console.log('[Dev Mode] getState');
-    return null;
-  },
-  setState: (state: unknown) => {
-    console.log('[Dev Mode] setState:', state);
-  },
-};
-
-// Make vscode API available globally for services that can't import ES modules
-window.vscode = vscode;
+// Backward-compat re-export. Consumers should migrate to importing directly
+// from `./services/vscode-api`, but the existing components still reach for
+// `from '../main'`.
+export { vscode };
 
 // ============================================================================
 // React 18 Root Initialization
