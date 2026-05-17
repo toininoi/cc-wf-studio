@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { createCanvasHandlers } from '../canvas/handlers.js';
 import { startCanvasServer } from '../canvas/server.js';
+import { reachabilityNote } from '../utils/host-warning.js';
 import { WorkflowLoadError, loadWorkflowFromFile } from '../utils/load-workflow.js';
 
 interface CanvasOptions {
@@ -123,8 +124,8 @@ export function registerCanvasCommand(program: Command): void {
           `  workflow: ${path.resolve(file)}`,
           `  bind:     ${server.host}:${server.port}`,
           '',
-          'localhost-only — DO NOT expose this URL on a public network.',
           'Save buttons in the canvas will write back to the workflow file.',
+          reachabilityNote(server.host),
           'Press Ctrl+C to stop.',
         ].join('\n');
         process.stdout.write(`${banner}\n`);

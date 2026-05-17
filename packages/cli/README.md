@@ -117,7 +117,7 @@ Read-only viewer powered by the `WorkflowOverview` component the VSCode extensio
 
 No editor, no Save button, no extension RPCs — the browser fetches a single static HTML, the workflow JSON is injected once at boot. A Server-Sent Events channel keeps the page in sync with disk: edits to the workflow file trigger an automatic reload.
 
-**Security**: bound to the IPv4 loopback (`127.0.0.1`) by default; the printed URL says `localhost` for readability and both addresses resolve to the same server. The entry URL and SSE channel live behind a per-session UUID path prefix (`http://localhost:<port>/<uuid>/`); requests without the prefix get a 403. Putting the secret in the path (rather than `?token=`) keeps it out of cross-origin Referer headers when the rendered Markdown links to an external site. Do not expose on a public network — there is no authentication beyond the URL.
+**Reachability**: bound to the IPv4 loopback (`127.0.0.1`) by default — only this machine can reach the server. The printed URL says `localhost` for readability and both addresses resolve to the same listener. The entry URL and SSE channel use a per-session UUID path prefix (`http://localhost:<port>/<uuid>/`) so two concurrent preview sessions don't collide; requests without the prefix get a 403. Pass `--host` (e.g. `0.0.0.0`) only when you intentionally want other machines on the network (Docker, DevContainers, Codespaces, a colleague's laptop on the same LAN, …) to reach the preview — the banner prints an explicit non-loopback notice when that happens.
 
 ### `ccwf canvas` (experimental)
 
@@ -130,7 +130,7 @@ ccwf canvas ./my-workflow.json --port 51234   # pin to a port
 
 > **Status**: experimental. The intent is to keep the in-VSCode experience reachable without VSCode for use cases like remote SSH or CI environments. For "just look at this workflow" the upcoming `ccwf preview` (read-only Mermaid + Markdown view) will be lighter — it skips the WebSocket and just renders the `WorkflowOverview` component statically.
 
-**Security**: the server binds to the IPv4 loopback (`127.0.0.1`) by default; the printed URL says `localhost` and both addresses resolve to the same server. The entry URL and WebSocket both live behind a per-session UUID path prefix (`http://localhost:<port>/<uuid>/`, `ws://localhost:<port>/<uuid>/ws`); requests without the prefix get a 403. Do **not** expose the URL on a public network — there is no authentication beyond knowing the UUID. Use `--host` only when you understand the implications (an explicit `--host` value is used for both bind and display).
+**Reachability**: the server binds to the IPv4 loopback (`127.0.0.1`) by default — only this machine can reach the server. The printed URL says `localhost` and both addresses resolve to the same listener. The entry URL and WebSocket use a per-session UUID path prefix (`http://localhost:<port>/<uuid>/`, `ws://localhost:<port>/<uuid>/ws`) so two concurrent sessions don't collide; requests without the prefix get a 403. Pass `--host` (e.g. `0.0.0.0`) only when you intentionally want other machines on the network to reach the canvas — the banner prints an explicit non-loopback notice when that happens.
 
 The bundled webview's VSCode message protocol is emulated by a small polyfill (`bootstrap.js`) injected into `index.html`. The webview source is **unchanged** — `window.acquireVsCodeApi` returns a WebSocket-backed transport that talks to this CLI process.
 

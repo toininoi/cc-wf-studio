@@ -75,7 +75,7 @@ ccwf preview ./my-workflow.json --keep-alive     # don't auto-shutdown when the 
 
 Use when the user says any of: "show me", "preview", "what does this workflow do?", "open it in a browser", "見せて", "可視化して".
 
-The printed URL has the shape `http://localhost:<port>/<uuid>/` — the UUID acts as a per-session credential, so don't paste the URL into shared chat.
+The printed URL has the shape `http://localhost:<port>/<uuid>/`. The UUID just keeps two concurrent preview sessions from clobbering each other — it isn't a security boundary, since the server only listens on the loopback interface by default.
 
 ### `ccwf canvas <file>` (experimental)
 
@@ -192,7 +192,7 @@ Use this as a lookup when the user describes intent in natural language. If the 
 
 ## Tips & gotchas
 
-- **`ccwf preview` URLs include a per-session UUID** — do not paste them into chat or screenshots. Treat the path component as a credential.
+- **`ccwf preview` URLs include a per-session UUID** so two concurrent preview sessions don't collide. The server itself only binds to the loopback interface (`127.0.0.1`) by default, so external machines can't reach it; the UUID is a path key, not a credential.
 - **Auto-shutdown**: `preview` and `canvas` shut themselves down 30 seconds after the last viewer tab closes. The countdown only starts once at least one viewer has connected, so a `preview` that nobody opens stays up. Use `--keep-alive` for multi-tab or LAN scenarios.
 - **`ccwf run --launch` requires `claude` on PATH**. If it's missing, the command warns and exits cleanly after writing the files — that's not an error condition.
 - **`ccwf canvas` is experimental** and missing Slack / Claude API / MCP / external-IDE export. If the user needs any of those, fall back to the VSCode extension.

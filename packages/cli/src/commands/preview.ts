@@ -19,6 +19,7 @@ import { migrateWorkflow } from '@cc-wf-studio/core';
 import { Command } from 'commander';
 import { startPreviewServer } from '../preview/server.js';
 import { watchWorkflowFile } from '../preview/watcher.js';
+import { reachabilityNote } from '../utils/host-warning.js';
 import { WorkflowLoadError, loadWorkflowFromFile } from '../utils/load-workflow.js';
 
 interface PreviewOptions {
@@ -156,7 +157,7 @@ export function registerPreviewCommand(program: Command): void {
           '',
           'Read-only — saves in this view are disabled by design (use `ccwf canvas` for editing).',
           'Browser auto-reloads when the workflow file changes on disk.',
-          'localhost-only — DO NOT expose this URL on a public network.',
+          reachabilityNote(server.host),
           'Press Ctrl+C to stop.',
         ].join('\n');
         process.stdout.write(`${banner}\n`);
