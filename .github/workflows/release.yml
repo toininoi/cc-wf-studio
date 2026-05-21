@@ -1,21 +1,20 @@
-name: Release
+name: Release — Publish
+
+# Manual publish. Run this from the Actions UI once a "Version Packages" PR
+# has been merged into main and main has been promoted to production. It
+# publishes every package whose version is ahead of the registry, creates the
+# git tags + GitHub releases, and (when the VSCode extension was bumped)
+# builds and uploads the VSIX.
+#
+# npm authentication uses OIDC Trusted Publishing — no NPM_TOKEN secret. Each
+# of @cc-wf-studio/{core,mcp,cli} must have a Trusted Publisher configured on
+# npmjs.com pointing at this repository + this workflow file.
 
 on:
   workflow_dispatch:
     inputs:
-      package:
-        description: 'Which package to release (semantic-release runs per package)'
-        required: true
-        type: choice
-        options:
-          - core
-          - mcp
-          - cli
-          - vscode
-          - all
-        default: 'all'
       ref:
-        description: 'Branch / tag to release from (defaults to production)'
+        description: 'Branch / tag to publish from (defaults to production)'
         required: false
         default: 'production'
 
@@ -26,8 +25,8 @@ permissions:
   id-token: write
 
 jobs:
-  release:
-    name: Release ${{ inputs.package }} from ${{ inputs.ref }}
+  publish:
+    name: Publish from ${{ inputs.ref }}
     runs-on: ubuntu-latest
 
     steps:
@@ -58,52 +57,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build npm packages
-        if: inputs.package == 'core' || inputs.package == 'mcp' || inputs.package == 'cli' || inputs.package == 'all'
-        run: pnpm --filter '@cc-wf-studio/*' run build
+      - name: Build all packages
+        run: pnpm -r run build
 
-      - name: Release @cc-wf-studio/core
-        if: inputs.package == 'core' || inputs.package == 'all'
-        working-directory: packages/core
-        run: pnpm exec semantic-release
+      - name: Publish (Changesets)
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: pnpm changeset publish
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           NPM_CONFIG_PROVENANCE: 'true'
 
-      - name: Release @cc-wf-studio/mcp
-        if: inputs.package == 'mcp' || inputs.package == 'all'
-        working-directory: packages/mcp
-        run: pnpm exec semantic-release
-        env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          NPM_CONFIG_PROVENANCE: 'true'
-
-      - name: Release @cc-wf-studio/cli
-        if: inputs.package == 'cli' || inputs.package == 'all'
-        working-directory: packages/cli
-        run: pnpm exec semantic-release
-        env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          NPM_CONFIG_PROVENANCE: 'true'
-
-      - name: Build VSCode extension
-        if: inputs.package == 'vscode' || inputs.package == 'all'
-        run: pnpm --filter cc-wf-studio run build
-
-      - name: Release cc-wf-studio (VSCode extension)
-        if: inputs.package == 'vscode' || inputs.package == 'all'
-        working-directory: packages/vscode
-        run: pnpm exec semantic-release
-        env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-
-      - name: Detect VSIX-needed release
-        if: inputs.package == 'vscode' || inputs.package == 'all'
+      - name: Detect VSCode extension release
         id: detect-vsix
         run: |
-          # semantic-release pushes a new commit + tag onto production. The
-          # release-bot commit ends up at HEAD locally too, so we look for any
-          # tag pointing at HEAD that matches the cc-wf-studio@* prefix.
+          # changeset publish tags the production commit (e.g. cc-wf-studio@3.35.0)
+          # when the extension version was bumped. Look for that tag at HEAD.
           NEW_TAG=$(git tag --points-at HEAD | grep '^cc-wf-studio@' | head -1 || true)
           if [ -n "$NEW_TAG" ]; then
             echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
